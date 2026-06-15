@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#E91E63" rx="40"/>
+  <!-- Large centered sparkle -->
+  <path d="M 100.0,45.0 L 111.7,88.3 L 155.0,100.0 L 111.7,111.7 L 100.0,155.0 L 88.3,111.7 L 45.0,100.0 L 88.3,88.3 Z" fill="#FFD700" />
+</svg>
