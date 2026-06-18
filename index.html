@@ -282,7 +282,7 @@
           </div>
         </div>
         <div class="contact-form">
-          <form action="#" method="POST">
+          <form id="contact-form" method="POST">
             <div class="form-group">
               <label for="name">Your Name</label>
               <input type="text" id="name" name="name" placeholder="Enter your name" required>
@@ -306,7 +306,8 @@
               <label for="message">Your Message</label>
               <textarea id="message" name="message" placeholder="Tell Laura about your goals, experience level, or any questions..."></textarea>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message ✨</button>
+            <div id="form-status" class="form-status" role="alert" aria-live="polite"></div>
+            <button type="submit" class="btn btn-primary" id="contact-submit" style="width: 100%;">Send Message ✨</button>
           </form>
         </div>
       </div>
@@ -342,22 +343,106 @@
           <h4>Connect</h4>
           <ul>
             <li><a href="https://instagram.com/ggnpowerwomen" target="_blank" rel="noopener">Instagram</a></li>
-            <li><a href="#">TikTok</a></li>
-            <li><a href="#">Facebook</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-bottom">
         <p>&copy; 2026 Reset Fitness. All rights reserved.</p>
         <div class="social-links">
-          <a href="#">📸</a>
-          <a href="#">🎵</a>
-          <a href="#">📘</a>
+          <a href="https://instagram.com/ggnpowerwomen" target="_blank" rel="noopener" title="Instagram">📸</a>
         </div>
-        <p><a href="#" style="color: rgba(255,255,255,0.4);">Privacy Policy</a> · <a href="#" style="color: rgba(255,255,255,0.4);">Terms</a></p>
       </div>
     </div>
   </footer>
+
+
+<!-- Contact form + newsletter wiring -->
+<script>
+(function() {
+  "use strict";
+
+  // --- Config ---
+  const SUPABASE_URL = "https://db.cryptosidao.org";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNzM2MjQxLCJleHAiOjIwOTcwOTYyNDEsInN1YiI6IiIsImF1ZCI6IiIsInNlc3Npb25faWQiOiIifQ.42EIXPOgVEG87j7Pr6HKgAS_jhgMZhn63xrBoiT-RCM";
+  const LISTMONK_URL = "https://173.249.36.76/listmonk";
+  const LISTMONK_LIST_UUID = "8e1f4a3b-7c2d-4e89-9f01-2a3b5c7d9e0f";
+
+  const form = document.getElementById("contact-form") || document.querySelector("#contact form");
+  if (!form) return;
+
+  const submitBtn = document.getElementById("contact-submit");
+  const statusEl = document.getElementById("form-status");
+
+  function showStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = "form-status " + (type || "");
+    statusEl.style.display = msg ? "block" : "none";
+  }
+
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending…"; }
+    showStatus("", "");
+
+    const formData = new FormData(form);
+    const name = (formData.get("name") || "").trim();
+    const email = (formData.get("email") || "").trim();
+    const interest = formData.get("interest") || "";
+    const message = (formData.get("message") || "").trim();
+    // checkbox: "also add me to the newsletter" — optional, default on
+    const subscribe = !formData.has("no-newsletter");
+
+    if (!name || !email) {
+      showStatus("Please enter your name and email.", "error");
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Send Message ✨"; }
+      return;
+    }
+
+    try {
+      // 1. Submit inquiry to Supabase
+      const res = await fetch(SUPABASE_URL + "/rest/v1/reset_inquiries", {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ name, email, interest, message, source: "landing-page" })
+      });
+
+      if (!res.ok) throw new Error("Inquiry submission failed (" + res.status + ")");
+
+      // 2. Optionally subscribe to newsletter via Listmonk
+      if (subscribe) {
+        try {
+          await fetch(LISTMONK_URL + "/api/public/subscription", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email,
+              name: name,
+              list_uuids: [LISTMONK_LIST_UUID]
+            })
+          });
+        } catch (lmErr) {
+          // Newsletter failure is non-blocking — inquiry already saved
+          console.warn("Newsletter signup failed:", lmErr);
+        }
+      }
+
+      showStatus("✅ Thanks, " + name + "! Your message is on its way to Laura. She\'ll be in touch soon.", "success");
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      showStatus("Sorry, something went wrong. Please try again or message Laura directly on Instagram @ggnpowerwomen.", "error");
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Send Message ✨"; }
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
